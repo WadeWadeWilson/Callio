@@ -45,6 +45,30 @@ Installierte Navigation Libraries:
 - `react-native-screens`
 - `react-native-safe-area-context`
 
+## Design-System
+
+Callio nutzt fuer die UI-Grundlage den React-Native-`StyleSheet`-Fallback mit zentralen TypeScript-Tokens. NativeWind wurde fuer dieses Bare-Projekt geprueft, aber nicht beibehalten, weil das Framework-less-Setup zusaetzlich eine NativeWind/Tailwind-Metro-Pipeline und `react-native-reanimated` erfordert. Fuer dieses Ticket bleibt die UI bewusst stabil, simpel und ohne weitere native Styling-Abhaengigkeiten.
+
+Theme-Dateien:
+
+- `src/theme/colors.ts`
+- `src/theme/spacing.ts`
+- `src/theme/typography.ts`
+- `src/theme/radius.ts`
+- `src/theme/shadows.ts`
+- `src/theme/index.ts`
+
+Wiederverwendbare UI-Komponenten:
+
+- `src/components/Screen.tsx`
+- `src/components/Card.tsx`
+- `src/components/AppText.tsx`
+- `src/components/AppButton.tsx`
+- `src/components/SectionHeader.tsx`
+- `src/components/EmptyState.tsx`
+
+Dieses Ticket enthaelt nur UI-Grundlagen und visuelle Platzhalter. Es implementiert keine Audio-, Import-, Datenbank-, Backup-, Playlist- oder Queue-Funktionen.
+
 ## Projektstruktur
 
 ```text

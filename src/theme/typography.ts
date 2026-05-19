@@ -1,22 +1,27 @@
 export const typography = {
-  title: {
-    fontSize: 40,
-    lineHeight: 46,
+  screenTitle: {
+    fontSize: 34,
+    lineHeight: 40,
     fontWeight: '700',
   },
-  subtitle: {
-    fontSize: 17,
+  sectionTitle: {
+    fontSize: 18,
     lineHeight: 24,
-    fontWeight: '400',
-  },
-  cardTitle: {
-    fontSize: 20,
-    lineHeight: 26,
     fontWeight: '700',
   },
   body: {
-    fontSize: 15,
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '400',
+  },
+  bodySmall: {
+    fontSize: 14,
     lineHeight: 22,
     fontWeight: '400',
+  },
+  caption: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '600',
   },
 } as const;

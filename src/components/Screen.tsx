@@ -1,33 +1,48 @@
 import type { ReactNode } from 'react';
 import {
-  Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors } from '../theme/colors';
-import { spacing } from '../theme/spacing';
+import { colors, spacing } from '../theme';
 
 type ScreenProps = {
   children: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  scrollable?: boolean;
+  style?: StyleProp<ViewStyle>;
 };
 
-export function Screen({ children, contentContainerStyle }: ScreenProps) {
+export function Screen({
+  children,
+  contentContainerStyle,
+  scrollable = true,
+  style,
+}: ScreenProps) {
+  const contentStyle = [styles.content, contentContainerStyle];
+
   return (
-    <View style={styles.safeArea}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={[styles.content, contentContainerStyle]}
-        alwaysBounceVertical={false}
-      >
-        {children}
-      </ScrollView>
-    </View>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+      {scrollable ? (
+        <ScrollView
+          style={[styles.container, style]}
+          contentContainerStyle={contentStyle}
+          alwaysBounceVertical={false}
+        >
+          {children}
+        </ScrollView>
+      ) : (
+        <View
+          style={[styles.container, styles.content, contentContainerStyle, style]}
+        >
+          {children}
+        </View>
+      )}
+    </SafeAreaView>
   );
 }
 
@@ -35,7 +50,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0,
   },
   container: {
     flex: 1,
@@ -45,7 +59,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
   },
 });

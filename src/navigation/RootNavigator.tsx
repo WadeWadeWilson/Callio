@@ -1,8 +1,12 @@
-import { DarkTheme, NavigationContainer, type Theme } from '@react-navigation/native';
+import {
+  DarkTheme,
+  NavigationContainer,
+  type Theme,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { PlayerScreen } from '../screens/PlayerScreen';
-import { colors } from '../theme/colors';
+import { colors } from '../theme';
 import { MainTabs } from './MainTabs';
 import type { RootStackParamList } from './types';
 

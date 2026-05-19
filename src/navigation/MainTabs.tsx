@@ -2,8 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { HomeScreen } from '../screens/HomeScreen';
 import { LibraryScreen } from '../screens/LibraryScreen';
-import { colors } from '../theme/colors';
-import { spacing } from '../theme/spacing';
+import { colors, spacing } from '../theme';
 import type { MainTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -14,16 +13,18 @@ export function MainTabs() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarHideOnKeyboard: true,
         tabBarLabelStyle: {
           fontSize: 13,
           fontWeight: '700',
-          marginBottom: spacing.sm,
+          marginBottom: spacing.xs,
         },
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
-          height: 64,
+          borderTopWidth: 1,
+          height: 66,
           paddingTop: spacing.sm,
         },
       }}
