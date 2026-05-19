@@ -1,6 +1,8 @@
 const migrations = new Map();
 const debugKv = new Map();
 const audioItems = new Map();
+const tags = new Map();
+const audioItemTags = new Set();
 const tables = new Set();
 const indexes = new Set();
 
@@ -60,17 +62,75 @@ function executeSql(sql, params = []) {
     return result([{ count: audioItems.size }], 0);
   }
 
-  if (normalizedSql.includes('from audio_items')) {
-    return result(selectAudioItems(normalizedSql, params), 0);
-  }
-
   if (normalizedSql.startsWith('update audio_items')) {
     return updateAudioItem(normalizedSql, params);
   }
 
   if (normalizedSql.startsWith('delete from audio_items where id = ?')) {
     const deleted = audioItems.delete(params[0]);
+    deleteAudioItemTagLinksForAudioItem(params[0]);
     return result([], deleted ? 1 : 0);
+  }
+
+  if (normalizedSql.includes('from audio_items')) {
+    return result(selectAudioItems(normalizedSql, params), 0);
+  }
+
+  if (normalizedSql.includes('insert into tags')) {
+    const row = createTagRow(params);
+    assertUniqueTagName(row.name, row.id);
+    tags.set(row.id, row);
+    return result([], 1);
+  }
+
+  if (normalizedSql.startsWith('select count(*) as count from tags')) {
+    return result([{ count: tags.size }], 0);
+  }
+
+  if (normalizedSql.startsWith('update tags')) {
+    return updateTag(normalizedSql, params);
+  }
+
+  if (normalizedSql.startsWith('delete from tags where id = ?')) {
+    const deleted = tags.delete(params[0]);
+    deleteAudioItemTagLinksForTag(params[0]);
+    return result([], deleted ? 1 : 0);
+  }
+
+  if (normalizedSql.includes('inner join audio_item_tags')) {
+    return result(selectTagsForAudioItem(params[0]), 0);
+  }
+
+  if (normalizedSql.includes('from tags')) {
+    return result(selectTags(normalizedSql, params), 0);
+  }
+
+  if (normalizedSql.includes('insert or ignore into audio_item_tags')) {
+    return insertAudioItemTag(params[0], params[1]);
+  }
+
+  if (
+    normalizedSql.startsWith(
+      'delete from audio_item_tags where audio_item_id = ? and tag_id = ?',
+    )
+  ) {
+    const deleted = audioItemTags.delete(
+      createAudioItemTagKey(params[0], params[1]),
+    );
+    return result([], deleted ? 1 : 0);
+  }
+
+  if (
+    normalizedSql.startsWith(
+      'delete from audio_item_tags where audio_item_id = ?',
+    )
+  ) {
+    const count = deleteAudioItemTagLinksForAudioItem(params[0]);
+    return result([], count);
+  }
+
+  if (normalizedSql.includes('from audio_item_tags where tag_id = ?')) {
+    return result(selectAudioItemIdsForTag(params[0]), 0);
   }
 
   if (normalizedSql.includes('from sqlite_master')) {
@@ -168,23 +228,7 @@ function selectAudioItems(normalizedSql, params) {
     rows.sort((left, right) => right.added_at.localeCompare(left.added_at));
   }
 
-  let offset = 0;
-  let limit;
-
-  if (normalizedSql.includes('limit ?')) {
-    limit = params[paramIndex];
-    paramIndex += 1;
-  }
-
-  if (normalizedSql.includes('offset ?')) {
-    offset = params[paramIndex];
-  }
-
-  if (limit !== undefined) {
-    return rows.slice(offset, offset + limit);
-  }
-
-  return rows.slice(offset);
+  return applyLimitOffset(rows, normalizedSql, params, paramIndex);
 }
 
 function updateAudioItem(normalizedSql, params) {
@@ -203,6 +247,172 @@ function updateAudioItem(normalizedSql, params) {
     return result([], 1);
   }
 
+  updateRowFromAssignments(row, normalizedSql, params);
+  return result([], 1);
+}
+
+function createTagRow(params) {
+  return {
+    id: params[0],
+    name: params[1],
+    color: params[2],
+    is_favorite: params[3],
+    is_pinned: params[4],
+    created_at: params[5],
+    updated_at: params[6],
+  };
+}
+
+function selectTags(normalizedSql, params) {
+  let paramIndex = 0;
+  let rows = Array.from(tags.values()).map(row => ({ ...row }));
+
+  if (normalizedSql.includes('where id = ?')) {
+    const id = params[paramIndex];
+    paramIndex += 1;
+    rows = rows.filter(row => row.id === id);
+  }
+
+  if (normalizedSql.includes('lower(name) = lower(?)')) {
+    const name = String(params[paramIndex]).toLowerCase();
+    paramIndex += 1;
+    rows = rows.filter(row => row.name.toLowerCase() === name);
+  }
+
+  if (normalizedSql.includes('name like ?')) {
+    const query = String(params[paramIndex]).replace(/%/g, '').toLowerCase();
+    paramIndex += 1;
+    rows = rows.filter(row => row.name.toLowerCase().includes(query));
+  }
+
+  if (normalizedSql.includes('is_favorite = ?')) {
+    const isFavorite = params[paramIndex];
+    paramIndex += 1;
+    rows = rows.filter(row => row.is_favorite === isFavorite);
+  }
+
+  if (normalizedSql.includes('is_pinned = ?')) {
+    const isPinned = params[paramIndex];
+    paramIndex += 1;
+    rows = rows.filter(row => row.is_pinned === isPinned);
+  }
+
+  if (normalizedSql.includes('order by name')) {
+    rows.sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  return applyLimitOffset(rows, normalizedSql, params, paramIndex);
+}
+
+function updateTag(normalizedSql, params) {
+  const id = params[params.length - 1];
+  const row = tags.get(id);
+
+  if (!row) {
+    return result([], 0);
+  }
+
+  const assignmentSql = normalizedSql
+    .slice(normalizedSql.indexOf('set ') + 4, normalizedSql.indexOf(' where '))
+    .trim();
+  const columns = assignmentSql
+    .split(',')
+    .map(assignment => assignment.trim().split(' = ')[0]);
+  const nameIndex = columns.indexOf('name');
+
+  if (nameIndex >= 0) {
+    assertUniqueTagName(params[nameIndex], id);
+  }
+
+  columns.forEach((column, index) => {
+    row[column] = params[index];
+  });
+
+  return result([], 1);
+}
+
+function selectTagsForAudioItem(audioItemId) {
+  const rows = [];
+
+  audioItemTags.forEach(key => {
+    const [linkedAudioItemId, tagId] = key.split('::');
+
+    if (linkedAudioItemId === audioItemId) {
+      const tag = tags.get(tagId);
+
+      if (tag) {
+        rows.push({ ...tag });
+      }
+    }
+  });
+
+  return rows.sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function insertAudioItemTag(audioItemId, tagId) {
+  if (!audioItems.has(audioItemId) || !tags.has(tagId)) {
+    throw new Error('FOREIGN KEY constraint failed');
+  }
+
+  const key = createAudioItemTagKey(audioItemId, tagId);
+  const existed = audioItemTags.has(key);
+  audioItemTags.add(key);
+
+  return result([], existed ? 0 : 1);
+}
+
+function selectAudioItemIdsForTag(tagId) {
+  return Array.from(audioItemTags)
+    .map(key => key.split('::'))
+    .filter(([, linkedTagId]) => linkedTagId === tagId)
+    .map(([audioItemId]) => ({ audio_item_id: audioItemId }))
+    .sort((left, right) =>
+      left.audio_item_id.localeCompare(right.audio_item_id),
+    );
+}
+
+function deleteAudioItemTagLinksForAudioItem(audioItemId) {
+  let count = 0;
+
+  audioItemTags.forEach(key => {
+    if (key.startsWith(`${audioItemId}::`)) {
+      audioItemTags.delete(key);
+      count += 1;
+    }
+  });
+
+  return count;
+}
+
+function deleteAudioItemTagLinksForTag(tagId) {
+  let count = 0;
+
+  audioItemTags.forEach(key => {
+    if (key.endsWith(`::${tagId}`)) {
+      audioItemTags.delete(key);
+      count += 1;
+    }
+  });
+
+  return count;
+}
+
+function createAudioItemTagKey(audioItemId, tagId) {
+  return `${audioItemId}::${tagId}`;
+}
+
+function assertUniqueTagName(name, currentId) {
+  const normalizedName = String(name).toLowerCase();
+  const duplicate = Array.from(tags.values()).some(
+    tag => tag.id !== currentId && tag.name.toLowerCase() === normalizedName,
+  );
+
+  if (duplicate) {
+    throw new Error('UNIQUE constraint failed: tags.name');
+  }
+}
+
+function updateRowFromAssignments(row, normalizedSql, params) {
   const assignmentSql = normalizedSql
     .slice(normalizedSql.indexOf('set ') + 4, normalizedSql.indexOf(' where '))
     .trim();
@@ -213,8 +423,26 @@ function updateAudioItem(normalizedSql, params) {
   columns.forEach((column, index) => {
     row[column] = params[index];
   });
+}
 
-  return result([], 1);
+function applyLimitOffset(rows, normalizedSql, params, paramIndex) {
+  let offset = 0;
+  let limit;
+
+  if (normalizedSql.includes('limit ?')) {
+    limit = params[paramIndex];
+    paramIndex += 1;
+  }
+
+  if (normalizedSql.includes('offset ?')) {
+    offset = params[paramIndex];
+  }
+
+  if (limit !== undefined) {
+    return rows.slice(offset, offset + limit);
+  }
+
+  return rows.slice(offset);
 }
 
 function createMockDb() {

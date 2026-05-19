@@ -4,6 +4,7 @@ import { StatusBar } from 'react-native';
 import { appInfo } from './appInfo';
 import { IS_DEV } from './config';
 import { runAudioItemRepositorySmokeTest } from '../features/library/audioItems/audioItemRepositorySmokeTest';
+import { runTagRepositorySmokeTest } from '../features/library/tags/tagRepositorySmokeTest';
 import { RootNavigator } from '../navigation/RootNavigator';
 import { initializeDatabase } from '../storage/database/DatabaseProvider';
 import { runSchemaCheck } from '../storage/database/schemaCheck';
@@ -26,6 +27,7 @@ function App() {
           await runDatabaseSmokeTest();
           await runSchemaCheck();
           await runAudioItemRepositorySmokeTest();
+          await runTagRepositorySmokeTest();
         }
       } catch (error) {
         logger.error('Database startup failed', {

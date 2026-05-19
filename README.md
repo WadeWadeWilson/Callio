@@ -186,6 +186,41 @@ Im Development fuehrt der App-Start `runAudioItemRepositorySmokeTest()` aus. Der
 
 Dieses Repository ist nur die technische Grundlage. Es gibt noch keinen echten Import, keinen File-System-Zugriff, kein Audio-Playback und keine Library-UI mit echten Daten.
 
+## TagRepository
+
+`src/features/library/tags` enthaelt die Repository-Schicht fuer `tags` und die Zuordnungstabelle `audio_item_tags`. Features muessen dadurch keine rohen SQL-Statements fuer Tags oder AudioItem-Tag-Zuweisungen schreiben.
+
+Dateien:
+
+- `types.ts`
+- `tagMapper.ts`
+- `TagRepository.ts`
+- `SqliteTagRepository.ts`
+- `tagRepositorySmokeTest.ts`
+- `index.ts`
+
+Unterstuetzte Methoden:
+
+- `create`
+- `getById`
+- `getByName`
+- `list`
+- `update`
+- `delete`
+- `count`
+- `assignTagToAudioItem`
+- `removeTagFromAudioItem`
+- `setTagsForAudioItem`
+- `getTagsForAudioItem`
+- `getAudioItemIdsForTag`
+- `findOrCreateByName`
+
+Tag-Namen werden getrimmt, leere Namen werden abgelehnt und `getByName`/`findOrCreateByName` suchen case-insensitive. Zuweisungen zu AudioItems sind idempotent; `setTagsForAudioItem` ersetzt die komplette Tag-Menge eines AudioItems in einer Transaktion.
+
+Im Development fuehrt der App-Start `runTagRepositorySmokeTest()` aus. Der Smoke Test erstellt ein Debug-AudioItem, weist einen Debug-Tag zu, prueft beide Richtungen der Zuordnung, testet Update/List/Count und raeumt die erzeugten Debug-Daten wieder auf. Bestehende Tags mit dem Namen `Debug` werden nicht geloescht.
+
+Dieses Ticket enthaelt noch keine Tag-UI, keinen Import, keinen File-System-Zugriff, kein Playback, keine Backup-Funktion und keine Playlist- oder Queue-Logik.
+
 ## AppInfoPanel
 
 `src/components/AppInfoPanel.tsx` zeigt App-Name, Version, Build Number, Environment, Platform Target und Storage Strategy. Das Panel ist dezent im Home-Screen eingebunden und nutzt die bestehenden UI-Komponenten.
