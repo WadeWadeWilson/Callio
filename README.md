@@ -120,8 +120,17 @@ Datenbank-Grundlage:
 - SQL-Helfer: `src/storage/database/sql.ts`
 - Migrationen: `src/storage/database/migrations.ts`
 - Smoke Test: `src/storage/database/smokeTest.ts`
+- Schema Check: `src/storage/database/schemaCheck.ts`
+- MVP Row-Typen: `src/storage/database/schema.ts`
 
-Das Migration-System erstellt die interne Tabelle `schema_migrations` und fuehrt Migrationen versioniert aus. Version `1` erstellt nur die technische Debug-Tabelle `debug_kv`:
+Das Migration-System erstellt die interne Tabelle `schema_migrations` und fuehrt Migrationen versioniert aus. Foreign Keys werden vor dem Migrationslauf per `PRAGMA foreign_keys = ON` aktiviert.
+
+Migrationen:
+
+- Version `1`: `create_debug_kv_table`
+- Version `2`: `create_callio_mvp_schema`
+
+Version `1` erstellt die technische Debug-Tabelle `debug_kv`:
 
 ```text
 debug_kv
@@ -131,9 +140,21 @@ debug_kv
   updated_at TEXT NOT NULL
 ```
 
-Im Development fuehrt der App-Start einen Smoke Test aus. Dabei wird der Key `db_smoke_test` in `debug_kv` geschrieben und wieder gelesen. Fehler werden geloggt, crashen die App aber nicht.
+Version `2` erstellt das MVP-Schema:
 
-Das produktive Callio-Schema kommt in einem spaeteren Ticket. Dieses Ticket implementiert keine Audio-, Import-, Backup-, Playlist-, Queue- oder Playback-Funktionen.
+- `audio_items`
+- `tags`
+- `audio_item_tags`
+- `playlists`
+- `playlist_items`
+- `playback_sessions`
+- `app_settings`
+
+Zusaetzlich werden zentrale Indizes fuer Media Type, Zeitfelder, Favoriten, Tags und Playlist-Positionen angelegt.
+
+Im Development fuehrt der App-Start einen Smoke Test aus. Dabei wird der Key `db_smoke_test` in `debug_kv` geschrieben und wieder gelesen. Danach prueft `runSchemaCheck()`, ob alle MVP-Tabellen und zentralen Indizes existieren. Fehler werden geloggt, crashen die App aber nicht.
+
+Repository-Implementierungen und Produktlogik kommen in den naechsten Tickets. Dieses Ticket implementiert keine Audio-, Import-, Backup-, Playlist-, Queue- oder Playback-Funktionen.
 
 ## AppInfoPanel
 

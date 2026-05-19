@@ -1,5 +1,7 @@
 const migrations = new Map();
 const debugKv = new Map();
+const tables = new Set();
+const indexes = new Set();
 
 function result(rows = [], rowsAffected = 0) {
   return {
@@ -10,6 +12,8 @@ function result(rows = [], rowsAffected = 0) {
 
 function executeSql(sql, params = []) {
   const normalizedSql = sql.replace(/\s+/g, ' ').trim().toLowerCase();
+
+  trackSchemaObject(normalizedSql);
 
   if (normalizedSql.startsWith('select version from schema_migrations')) {
     return result(
@@ -45,7 +49,34 @@ function executeSql(sql, params = []) {
     return result(row ? [{ value: row.value }] : [], 0);
   }
 
+  if (normalizedSql.includes('from sqlite_master')) {
+    const type = params[0];
+    const names = params.slice(1);
+    const source = type === 'index' ? indexes : tables;
+    return result(
+      names.filter(name => source.has(name)).map(name => ({ name })),
+      0,
+    );
+  }
+
   return result();
+}
+
+function trackSchemaObject(normalizedSql) {
+  const tableMatch = normalizedSql.match(
+    /^create table if not exists ([a-z_]+)/,
+  );
+  if (tableMatch) {
+    tables.add(tableMatch[1]);
+    return;
+  }
+
+  const indexMatch = normalizedSql.match(
+    /^create index if not exists ([a-z_]+)/,
+  );
+  if (indexMatch) {
+    indexes.add(indexMatch[1]);
+  }
 }
 
 function createMockDb() {

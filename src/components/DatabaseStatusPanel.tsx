@@ -21,7 +21,7 @@ const statusCopy: Record<
   ready: {
     label: 'bereit',
     color: colors.accent,
-    description: 'callio.db ist geöffnet und migriert.',
+    description: 'callio.db ist geöffnet. Schema: MVP v2 bereit.',
   },
   error: {
     label: 'Fehler',

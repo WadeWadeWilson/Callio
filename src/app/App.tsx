@@ -5,6 +5,7 @@ import { appInfo } from './appInfo';
 import { IS_DEV } from './config';
 import { RootNavigator } from '../navigation/RootNavigator';
 import { initializeDatabase } from '../storage/database/DatabaseProvider';
+import { runSchemaCheck } from '../storage/database/schemaCheck';
 import { runDatabaseSmokeTest } from '../storage/database/smokeTest';
 import { colors } from '../theme';
 import { logger } from '../utils/logger';
@@ -22,6 +23,7 @@ function App() {
 
         if (IS_DEV) {
           await runDatabaseSmokeTest();
+          await runSchemaCheck();
         }
       } catch (error) {
         logger.error('Database startup failed', {
