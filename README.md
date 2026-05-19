@@ -1,6 +1,6 @@
 # Callio
 
-Callio ist ein minimalistischer Offline-Audioplayer im React-Native-Bare-Workflow. Das MVP ist Android-first.
+Callio ist ein minimalistischer Offline-Audioplayer im React-Native-Bare-Workflow mit TypeScript. Das MVP ist Android-first.
 
 ## Setup
 
@@ -28,6 +28,23 @@ npm run typecheck
 
 Unter Windows PowerShell kann alternativ `npm.cmd` verwendet werden, falls lokale Script-Ausfuehrung deaktiviert ist.
 
+## Navigation
+
+Callio nutzt eine typisierte React-Navigation-Struktur:
+
+- `NavigationContainer` mit Native Stack
+- `MainTabs` als Hauptbereich
+- Bottom Tabs fuer `Home` und `Library`
+- separater `Player`-Screen im Root Stack
+
+Installierte Navigation Libraries:
+
+- `@react-navigation/native`
+- `@react-navigation/bottom-tabs`
+- `@react-navigation/native-stack`
+- `react-native-screens`
+- `react-native-safe-area-context`
+
 ## Projektstruktur
 
 ```text
@@ -45,4 +62,4 @@ src/
   utils/
 ```
 
-Aktuell enthaelt Callio nur das stabile Projektfundament und einen einfachen dunklen Startscreen. Audio-, Import-, Datenbank-, Backup- und Playlist-Funktionen sind noch nicht implementiert.
+Aktuell enthaelt Callio das stabile Projektfundament, typisierte Basis-Navigation und einfache Platzhalter-Screens. Audio-, Import-, Datenbank-, Backup-, Playlist- und Queue-Funktionen sind noch nicht implementiert.
