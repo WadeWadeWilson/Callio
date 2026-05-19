@@ -1,6 +1,8 @@
 import { useNavigation } from '@react-navigation/native';
 import { StyleSheet, View } from 'react-native';
 
+import { appInfo } from '../app/appInfo';
+import { AppInfoPanel } from '../components/AppInfoPanel';
 import { AppText } from '../components/AppText';
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
@@ -16,9 +18,9 @@ export function HomeScreen() {
   return (
     <Screen>
       <View style={styles.header}>
-        <AppText variant="title">Callio</AppText>
+        <AppText variant="title">{appInfo.appName}</AppText>
         <AppText color={colors.textSecondary} style={styles.subtitle}>
-          Deine Audiobibliothek. Immer bereit.
+          {appInfo.appTagline}
         </AppText>
       </View>
 
@@ -38,6 +40,9 @@ export function HomeScreen() {
           title="Favoriten erscheinen später hier."
         />
       </Card>
+
+      <SectionHeader title="App-Info" />
+      <AppInfoPanel />
     </Screen>
   );
 }

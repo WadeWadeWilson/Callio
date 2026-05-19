@@ -69,6 +69,48 @@ Wiederverwendbare UI-Komponenten:
 
 Dieses Ticket enthaelt nur UI-Grundlagen und visuelle Platzhalter. Es implementiert keine Audio-, Import-, Datenbank-, Backup-, Playlist- oder Queue-Funktionen.
 
+## App-Konfiguration
+
+Lokale App-Konfiguration liegt in `src/app/config.ts`. Sie enthaelt zentrale, nicht geheime Werte:
+
+- `APP_NAME`
+- `APP_TAGLINE`
+- `APP_ENV`
+- `IS_DEV`
+- `MVP_PLATFORM`
+- `STORAGE_STRATEGY`
+
+`src/app/appInfo.ts` stellt daraus eine einfache App-Info-Struktur bereit. Version und Build Number sind aktuell statisch (`0.1.0`, Build `1`) und koennen spaeter durch native Build-Werte ersetzt werden.
+
+## Logging
+
+Callio nutzt `src/utils/logger.ts` als lokale Logger-Utility ohne externe Dienste. Verfuegbar sind:
+
+- `logger.debug(message, context?)`
+- `logger.info(message, context?)`
+- `logger.warn(message, context?)`
+- `logger.error(message, context?)`
+
+In Development schreiben alle Methoden in die Konsole. In Production bleiben `debug` und `info` still, waehrend `warn` und `error` weiter ausgeben duerfen. Es werden keine Logs gespeichert, keine Analytics eingebaut und keine externen Logging-Services wie Sentry verwendet.
+
+## Error Handling
+
+`src/utils/errors.ts` enthaelt eine einfache `AppError`-Klasse und vorbereitete Fehlercodes fuer spaetere Features:
+
+- `UNKNOWN_ERROR`
+- `FILE_PICKER_ERROR`
+- `FILE_COPY_ERROR`
+- `DATABASE_ERROR`
+- `PLAYBACK_ERROR`
+- `BACKUP_ERROR`
+- `RESTORE_ERROR`
+
+Das ist nur die Grundlage. Es gibt noch keine Feature-Fehlerlogik.
+
+## AppInfoPanel
+
+`src/components/AppInfoPanel.tsx` zeigt App-Name, Version, Build Number, Environment, Platform Target und Storage Strategy. Das Panel ist dezent im Home-Screen eingebunden und nutzt die bestehenden UI-Komponenten.
+
 ## Projektstruktur
 
 ```text
