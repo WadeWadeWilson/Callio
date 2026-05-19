@@ -107,6 +107,34 @@ In Development schreiben alle Methoden in die Konsole. In Production bleiben `de
 
 Das ist nur die Grundlage. Es gibt noch keine Feature-Fehlerlogik.
 
+## Lokale Datenbank
+
+Callio nutzt `@op-engineering/op-sqlite` als SQLite-Treiber fuer lokale Offline-Persistenz in der React-Native-Bare-App. Der Treiber wird hinter der eigenen Abstraktion `DatabaseConnection` gekapselt, damit der Rest der App nicht direkt `op-sqlite` importieren muss.
+
+Datenbank-Grundlage:
+
+- Datenbankdatei: `callio.db`
+- Einstieg: `src/storage/database/DatabaseProvider.ts`
+- Treiber-Kapselung: `src/storage/database/database.ts`
+- Typen: `src/storage/database/types.ts`
+- SQL-Helfer: `src/storage/database/sql.ts`
+- Migrationen: `src/storage/database/migrations.ts`
+- Smoke Test: `src/storage/database/smokeTest.ts`
+
+Das Migration-System erstellt die interne Tabelle `schema_migrations` und fuehrt Migrationen versioniert aus. Version `1` erstellt nur die technische Debug-Tabelle `debug_kv`:
+
+```text
+debug_kv
+  key TEXT PRIMARY KEY
+  value TEXT NOT NULL
+  created_at TEXT NOT NULL
+  updated_at TEXT NOT NULL
+```
+
+Im Development fuehrt der App-Start einen Smoke Test aus. Dabei wird der Key `db_smoke_test` in `debug_kv` geschrieben und wieder gelesen. Fehler werden geloggt, crashen die App aber nicht.
+
+Das produktive Callio-Schema kommt in einem spaeteren Ticket. Dieses Ticket implementiert keine Audio-, Import-, Backup-, Playlist-, Queue- oder Playback-Funktionen.
+
 ## AppInfoPanel
 
 `src/components/AppInfoPanel.tsx` zeigt App-Name, Version, Build Number, Environment, Platform Target und Storage Strategy. Das Panel ist dezent im Home-Screen eingebunden und nutzt die bestehenden UI-Komponenten.

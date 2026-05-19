@@ -5,6 +5,7 @@ import { appInfo } from '../app/appInfo';
 import { AppInfoPanel } from '../components/AppInfoPanel';
 import { AppText } from '../components/AppText';
 import { Card } from '../components/Card';
+import { DatabaseStatusPanel } from '../components/DatabaseStatusPanel';
 import { EmptyState } from '../components/EmptyState';
 import { Screen } from '../components/Screen';
 import { SectionHeader } from '../components/SectionHeader';
@@ -43,6 +44,9 @@ export function HomeScreen() {
 
       <SectionHeader title="App-Info" />
       <AppInfoPanel />
+
+      <SectionHeader title="Persistenz" />
+      <DatabaseStatusPanel />
     </Screen>
   );
 }

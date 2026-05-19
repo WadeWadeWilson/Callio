@@ -2,7 +2,10 @@ import React, { useEffect } from 'react';
 import { StatusBar } from 'react-native';
 
 import { appInfo } from './appInfo';
+import { IS_DEV } from './config';
 import { RootNavigator } from '../navigation/RootNavigator';
+import { initializeDatabase } from '../storage/database/DatabaseProvider';
+import { runDatabaseSmokeTest } from '../storage/database/smokeTest';
 import { colors } from '../theme';
 import { logger } from '../utils/logger';
 
@@ -12,6 +15,22 @@ function App() {
       environment: appInfo.environment,
       platformTarget: appInfo.platformTarget,
     });
+
+    const initializeLocalDatabase = async () => {
+      try {
+        await initializeDatabase();
+
+        if (IS_DEV) {
+          await runDatabaseSmokeTest();
+        }
+      } catch (error) {
+        logger.error('Database startup failed', {
+          errorMessage: error instanceof Error ? error.message : String(error),
+        });
+      }
+    };
+
+    initializeLocalDatabase();
   }, []);
 
   return (
