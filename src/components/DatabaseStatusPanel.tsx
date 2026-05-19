@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { createAudioItemRepository } from '../features/library/audioItems';
 import { initializeDatabase } from '../storage/database/DatabaseProvider';
 import { colors, spacing } from '../theme';
 import { logger } from '../utils/logger';
@@ -16,12 +17,12 @@ const statusCopy: Record<
   initializing: {
     label: 'wird vorbereitet',
     color: colors.textMuted,
-    description: 'Migrationen werden geprüft.',
+    description: 'Migrationen werden geprueft.',
   },
   ready: {
     label: 'bereit',
     color: colors.accent,
-    description: 'callio.db ist geöffnet. Schema: MVP v2 bereit.',
+    description: 'callio.db ist geoeffnet. Schema: MVP v2 bereit.',
   },
   error: {
     label: 'Fehler',
@@ -33,6 +34,7 @@ const statusCopy: Record<
 export function DatabaseStatusPanel() {
   const [databaseStatus, setDatabaseStatus] =
     useState<DatabaseStatus>('initializing');
+  const [audioItemCount, setAudioItemCount] = useState<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -40,8 +42,11 @@ export function DatabaseStatusPanel() {
     const checkDatabase = async () => {
       try {
         await initializeDatabase();
+        const repository = createAudioItemRepository();
+        const count = await repository.count();
 
         if (isMounted) {
+          setAudioItemCount(count);
           setDatabaseStatus('ready');
         }
       } catch (error) {
@@ -63,6 +68,10 @@ export function DatabaseStatusPanel() {
   }, []);
 
   const copy = statusCopy[databaseStatus];
+  const description =
+    databaseStatus === 'ready' && audioItemCount !== null
+      ? `${copy.description} Audio Items: ${audioItemCount}.`
+      : copy.description;
 
   return (
     <Card style={styles.panel}>
@@ -72,7 +81,7 @@ export function DatabaseStatusPanel() {
           {copy.label}
         </AppText>
       </View>
-      <AppText color={colors.textSecondary}>{copy.description}</AppText>
+      <AppText color={colors.textSecondary}>{description}</AppText>
     </Card>
   );
 }

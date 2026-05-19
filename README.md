@@ -154,7 +154,37 @@ Zusaetzlich werden zentrale Indizes fuer Media Type, Zeitfelder, Favoriten, Tags
 
 Im Development fuehrt der App-Start einen Smoke Test aus. Dabei wird der Key `db_smoke_test` in `debug_kv` geschrieben und wieder gelesen. Danach prueft `runSchemaCheck()`, ob alle MVP-Tabellen und zentralen Indizes existieren. Fehler werden geloggt, crashen die App aber nicht.
 
-Repository-Implementierungen und Produktlogik kommen in den naechsten Tickets. Dieses Ticket implementiert keine Audio-, Import-, Backup-, Playlist-, Queue- oder Playback-Funktionen.
+Repository-Implementierungen werden schrittweise ergaenzt. Produktlogik, Import, File-System-Zugriff, Backup, Playlist-, Queue- und Playback-Funktionen sind noch nicht implementiert.
+
+## AudioItemRepository
+
+`src/features/library/audioItems` enthaelt die erste produktive Repository-Schicht fuer `audio_items`. Die App arbeitet damit ueber Domain-Typen und Mapper statt ueber rohes SQL in Screens oder Features.
+
+Dateien:
+
+- `types.ts`
+- `audioItemMapper.ts`
+- `AudioItemRepository.ts`
+- `SqliteAudioItemRepository.ts`
+- `audioItemRepositorySmokeTest.ts`
+- `index.ts`
+
+Unterstuetzte Methoden:
+
+- `create`
+- `getById`
+- `list`
+- `update`
+- `delete`
+- `count`
+- `updateProgress`
+- `markPlayed`
+- `setFavorite`
+- `setPinned`
+
+Im Development fuehrt der App-Start `runAudioItemRepositorySmokeTest()` aus. Der Smoke Test erstellt einen Debug-Track, liest ihn per ID, aktualisiert Fortschritt und Favorit, sucht nach `Debug`, fragt den Count ab und loescht den Debug-Datensatz danach wieder. Fehler werden geloggt und sollen die App nicht crashen.
+
+Dieses Repository ist nur die technische Grundlage. Es gibt noch keinen echten Import, keinen File-System-Zugriff, kein Audio-Playback und keine Library-UI mit echten Daten.
 
 ## AppInfoPanel
 
@@ -177,4 +207,4 @@ src/
   utils/
 ```
 
-Aktuell enthaelt Callio das stabile Projektfundament, typisierte Basis-Navigation und einfache Platzhalter-Screens. Audio-, Import-, Datenbank-, Backup-, Playlist- und Queue-Funktionen sind noch nicht implementiert.
+Aktuell enthaelt Callio das stabile Projektfundament, typisierte Basis-Navigation, einfache Platzhalter-Screens und die ersten lokalen Datenbank-Grundlagen. Import-, Backup-, Playlist-, Queue- und Playback-Funktionen sind noch nicht implementiert.
