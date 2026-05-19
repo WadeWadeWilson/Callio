@@ -3,6 +3,8 @@ const debugKv = new Map();
 const audioItems = new Map();
 const tags = new Map();
 const audioItemTags = new Set();
+const playlists = new Map();
+const playlistItems = new Map();
 const tables = new Set();
 const indexes = new Set();
 
@@ -69,6 +71,7 @@ function executeSql(sql, params = []) {
   if (normalizedSql.startsWith('delete from audio_items where id = ?')) {
     const deleted = audioItems.delete(params[0]);
     deleteAudioItemTagLinksForAudioItem(params[0]);
+    deletePlaylistItemsForAudioItem(params[0]);
     return result([], deleted ? 1 : 0);
   }
 
@@ -103,6 +106,61 @@ function executeSql(sql, params = []) {
 
   if (normalizedSql.includes('from tags')) {
     return result(selectTags(normalizedSql, params), 0);
+  }
+
+  if (normalizedSql.includes('insert into playlists')) {
+    const row = createPlaylistRow(params);
+    playlists.set(row.id, row);
+    return result([], 1);
+  }
+
+  if (normalizedSql.startsWith('select count(*) as count from playlists')) {
+    return result([{ count: playlists.size }], 0);
+  }
+
+  if (normalizedSql.startsWith('update playlists')) {
+    return updatePlaylist(normalizedSql, params);
+  }
+
+  if (normalizedSql.startsWith('delete from playlists where id = ?')) {
+    const deleted = playlists.delete(params[0]);
+    deletePlaylistItemsForPlaylist(params[0]);
+    return result([], deleted ? 1 : 0);
+  }
+
+  if (normalizedSql.includes('from playlists')) {
+    return result(selectPlaylists(normalizedSql, params), 0);
+  }
+
+  if (normalizedSql.includes('insert into playlist_items')) {
+    return insertPlaylistItem(params);
+  }
+
+  if (normalizedSql.startsWith('update playlist_items')) {
+    return updatePlaylistItem(normalizedSql, params);
+  }
+
+  if (normalizedSql.startsWith('delete from playlist_items where id = ?')) {
+    const deleted = playlistItems.delete(params[0]);
+    return result([], deleted ? 1 : 0);
+  }
+
+  if (
+    normalizedSql.startsWith(
+      'delete from playlist_items where playlist_id = ? and audio_item_id = ?',
+    )
+  ) {
+    return deletePlaylistItemsForPlaylistAndAudioItem(params[0], params[1]);
+  }
+
+  if (
+    normalizedSql.startsWith('delete from playlist_items where playlist_id = ?')
+  ) {
+    return result([], deletePlaylistItemsForPlaylist(params[0]));
+  }
+
+  if (normalizedSql.includes('from playlist_items')) {
+    return result(selectPlaylistItems(normalizedSql, params), 0);
   }
 
   if (normalizedSql.includes('insert or ignore into audio_item_tags')) {
@@ -331,6 +389,133 @@ function updateTag(normalizedSql, params) {
   return result([], 1);
 }
 
+function createPlaylistRow(params) {
+  return {
+    id: params[0],
+    name: params[1],
+    description: params[2],
+    cover_path: params[3],
+    is_favorite: params[4],
+    is_pinned: params[5],
+    current_audio_item_id: params[6],
+    current_position_ms: params[7],
+    created_at: params[8],
+    updated_at: params[9],
+    last_played_at: params[10],
+  };
+}
+
+function selectPlaylists(normalizedSql, params) {
+  let paramIndex = 0;
+  let rows = Array.from(playlists.values()).map(row => ({ ...row }));
+
+  if (normalizedSql.includes('where id = ?')) {
+    const id = params[paramIndex];
+    paramIndex += 1;
+    rows = rows.filter(row => row.id === id);
+  }
+
+  if (normalizedSql.includes('(name like ? or description like ?)')) {
+    const query = String(params[paramIndex]).replace(/%/g, '').toLowerCase();
+    paramIndex += 2;
+    rows = rows.filter(row => {
+      const name = String(row.name).toLowerCase();
+      const description = row.description
+        ? String(row.description).toLowerCase()
+        : '';
+
+      return name.includes(query) || description.includes(query);
+    });
+  }
+
+  if (normalizedSql.includes('is_favorite = ?')) {
+    const isFavorite = params[paramIndex];
+    paramIndex += 1;
+    rows = rows.filter(row => row.is_favorite === isFavorite);
+  }
+
+  if (normalizedSql.includes('is_pinned = ?')) {
+    const isPinned = params[paramIndex];
+    paramIndex += 1;
+    rows = rows.filter(row => row.is_pinned === isPinned);
+  }
+
+  if (normalizedSql.includes('order by updated_at desc')) {
+    rows.sort((left, right) => right.updated_at.localeCompare(left.updated_at));
+  }
+
+  return applyLimitOffset(rows, normalizedSql, params, paramIndex);
+}
+
+function updatePlaylist(normalizedSql, params) {
+  const id = params[params.length - 1];
+  const row = playlists.get(id);
+
+  if (!row) {
+    return result([], 0);
+  }
+
+  updateRowFromAssignments(row, normalizedSql, params);
+  return result([], 1);
+}
+
+function insertPlaylistItem(params) {
+  const row = createPlaylistItemRow(params);
+
+  if (!playlists.has(row.playlist_id) || !audioItems.has(row.audio_item_id)) {
+    throw new Error('FOREIGN KEY constraint failed');
+  }
+
+  playlistItems.set(row.id, row);
+  return result([], 1);
+}
+
+function createPlaylistItemRow(params) {
+  return {
+    id: params[0],
+    playlist_id: params[1],
+    audio_item_id: params[2],
+    position: params[3],
+    created_at: params[4],
+  };
+}
+
+function selectPlaylistItems(normalizedSql, params) {
+  let rows = Array.from(playlistItems.values()).map(row => ({ ...row }));
+
+  if (normalizedSql.includes('where id = ?')) {
+    rows = rows.filter(row => row.id === params[0]);
+  }
+
+  if (normalizedSql.includes('where playlist_id = ?')) {
+    rows = rows.filter(row => row.playlist_id === params[0]);
+  }
+
+  if (normalizedSql.includes('order by position asc')) {
+    rows.sort((left, right) => {
+      if (left.position !== right.position) {
+        return left.position - right.position;
+      }
+
+      return left.created_at.localeCompare(right.created_at);
+    });
+  }
+
+  return rows;
+}
+
+function updatePlaylistItem(normalizedSql, params) {
+  const id = params[params.length - 1];
+  const row = playlistItems.get(id);
+
+  if (!row) {
+    return result([], 0);
+  }
+
+  updateRowFromAssignments(row, normalizedSql, params);
+  return result([], 1);
+}
+
 function selectTagsForAudioItem(audioItemId) {
   const rows = [];
 
@@ -395,6 +580,45 @@ function deleteAudioItemTagLinksForTag(tagId) {
   });
 
   return count;
+}
+
+function deletePlaylistItemsForPlaylist(playlistId) {
+  let count = 0;
+
+  playlistItems.forEach((item, id) => {
+    if (item.playlist_id === playlistId) {
+      playlistItems.delete(id);
+      count += 1;
+    }
+  });
+
+  return count;
+}
+
+function deletePlaylistItemsForAudioItem(audioItemId) {
+  let count = 0;
+
+  playlistItems.forEach((item, id) => {
+    if (item.audio_item_id === audioItemId) {
+      playlistItems.delete(id);
+      count += 1;
+    }
+  });
+
+  return count;
+}
+
+function deletePlaylistItemsForPlaylistAndAudioItem(playlistId, audioItemId) {
+  let count = 0;
+
+  playlistItems.forEach((item, id) => {
+    if (item.playlist_id === playlistId && item.audio_item_id === audioItemId) {
+      playlistItems.delete(id);
+      count += 1;
+    }
+  });
+
+  return result([], count);
 }
 
 function createAudioItemTagKey(audioItemId, tagId) {

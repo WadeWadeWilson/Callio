@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { createAudioItemRepository } from '../features/library/audioItems';
+import { createPlaylistRepository } from '../features/library/playlists';
 import { createTagRepository } from '../features/library/tags';
 import { initializeDatabase } from '../storage/database/DatabaseProvider';
 import { colors, spacing } from '../theme';
@@ -36,6 +37,7 @@ export function DatabaseStatusPanel() {
   const [databaseStatus, setDatabaseStatus] =
     useState<DatabaseStatus>('initializing');
   const [audioItemCount, setAudioItemCount] = useState<number | null>(null);
+  const [playlistCount, setPlaylistCount] = useState<number | null>(null);
   const [tagCount, setTagCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -45,12 +47,15 @@ export function DatabaseStatusPanel() {
       try {
         await initializeDatabase();
         const audioItemRepository = createAudioItemRepository();
+        const playlistRepository = createPlaylistRepository();
         const tagRepository = createTagRepository();
         const nextAudioItemCount = await audioItemRepository.count();
+        const nextPlaylistCount = await playlistRepository.count();
         const nextTagCount = await tagRepository.count();
 
         if (isMounted) {
           setAudioItemCount(nextAudioItemCount);
+          setPlaylistCount(nextPlaylistCount);
           setTagCount(nextTagCount);
           setDatabaseStatus('ready');
         }
@@ -74,8 +79,8 @@ export function DatabaseStatusPanel() {
 
   const copy = statusCopy[databaseStatus];
   const counts =
-    audioItemCount !== null && tagCount !== null
-      ? ` Audio Items: ${audioItemCount}. Tags: ${tagCount}.`
+    audioItemCount !== null && playlistCount !== null && tagCount !== null
+      ? ` Audio Items: ${audioItemCount}. Tags: ${tagCount}. Playlists: ${playlistCount}.`
       : '';
   const description =
     databaseStatus === 'ready'

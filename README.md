@@ -221,6 +221,44 @@ Im Development fuehrt der App-Start `runTagRepositorySmokeTest()` aus. Der Smoke
 
 Dieses Ticket enthaelt noch keine Tag-UI, keinen Import, keinen File-System-Zugriff, kein Playback, keine Backup-Funktion und keine Playlist- oder Queue-Logik.
 
+## PlaylistRepository
+
+`src/features/library/playlists` enthaelt die Repository-Schicht fuer `playlists` und die sortierte Zuordnungstabelle `playlist_items`. Features muessen dadurch keine rohen SQL-Statements fuer Playlists oder Playlist-Reihenfolgen schreiben.
+
+Dateien:
+
+- `types.ts`
+- `playlistMapper.ts`
+- `PlaylistRepository.ts`
+- `SqlitePlaylistRepository.ts`
+- `playlistRepositorySmokeTest.ts`
+- `index.ts`
+
+Unterstuetzte Methoden:
+
+- `create`
+- `getById`
+- `getWithItems`
+- `list`
+- `update`
+- `delete`
+- `count`
+- `addItem`
+- `removeItem`
+- `removeAudioItemFromPlaylist`
+- `listItems`
+- `reorderItems`
+- `clearItems`
+- `updateResumeState`
+
+Playlist-Namen werden getrimmt, leere Namen werden abgelehnt und Listen koennen nach Suche, Favoriten und Pins gefiltert werden. Playlist-Items werden ueber `position` sortiert. Beim Einfuegen an einer Position, Entfernen und Reorder werden Positionen auf `0..n-1` normalisiert. Fuer Positionsupdates werden vorhandene Items kurz auf temporaere negative Positionen verschoben, damit der eindeutige Index auf `(playlist_id, position)` nicht kollidiert.
+
+`updateResumeState` speichert fuer Playlists `current_audio_item_id`, `current_position_ms`, `last_played_at` und `updated_at`. Das ist nur Persistenzgrundlage; es gibt noch keine Queue- oder Playback-Logik.
+
+Im Development fuehrt der App-Start `runPlaylistRepositorySmokeTest()` aus. Der Smoke Test erstellt zwei Debug-AudioItems, erstellt eine Debug-Playlist, fuegt beide Items hinzu, prueft und dreht die Reihenfolge, laedt `getWithItems`, setzt Resume State, testet Update/List/Count und raeumt Playlist sowie Debug-AudioItems wieder auf.
+
+Dieses Ticket enthaelt noch keine Playlist-UI, keinen Import, keinen File-System-Zugriff, kein Playback, keine Backup-Funktion und keine Queue-Logik.
+
 ## AppInfoPanel
 
 `src/components/AppInfoPanel.tsx` zeigt App-Name, Version, Build Number, Environment, Platform Target und Storage Strategy. Das Panel ist dezent im Home-Screen eingebunden und nutzt die bestehenden UI-Komponenten.
