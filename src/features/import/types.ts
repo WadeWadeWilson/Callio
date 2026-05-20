@@ -13,6 +13,18 @@ export type ImportSessionStatus =
   | 'error'
   | 'cleared';
 
+export interface ImportDraftMetadata {
+  title: string;
+  creator: string | null;
+  mediaType: ImportInferredMediaType;
+  extension: string | null;
+  mimeType: string | null;
+  durationMs: number | null;
+  coverPath: string | null;
+  tags: string[];
+  originalFilename: string | null;
+}
+
 export interface ImportCandidate {
   id: string;
   sourceUri: string;
@@ -28,6 +40,7 @@ export interface ImportCandidate {
   tempFileName: string | null;
   copyErrorMessage: string | null;
   copiedAt: string | null;
+  draftMetadata: ImportDraftMetadata | null;
 }
 
 export interface ImportSession {

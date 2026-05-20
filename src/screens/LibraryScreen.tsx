@@ -9,6 +9,7 @@ import { Screen } from '../components/Screen';
 import { SectionHeader } from '../components/SectionHeader';
 import {
   clearCurrentImportSession,
+  createImportMetadataService,
   createImportPickerService,
   createImportTempStorageService,
   getCurrentImportSession,
@@ -16,6 +17,7 @@ import {
   updateCurrentImportSession,
   type ImportCandidate,
   type ImportCandidateStatus,
+  type ImportDraftMetadata,
   type ImportSession,
   type ImportSessionStatus,
 } from '../features/import';
@@ -31,6 +33,7 @@ const libraryPlaceholders = [
 
 const importPickerService = createImportPickerService();
 const importTempStorageService = createImportTempStorageService();
+const importMetadataService = createImportMetadataService();
 
 export function LibraryScreen() {
   const [importSession, setImportSession] = useState<ImportSession | null>(() =>
@@ -38,6 +41,7 @@ export function LibraryScreen() {
   );
   const [isPicking, setIsPicking] = useState(false);
   const [isPreparingTemp, setIsPreparingTemp] = useState(false);
+  const [isPreparingMetadata, setIsPreparingMetadata] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
 
   const importCounts = useMemo(() => {
@@ -60,9 +64,19 @@ export function LibraryScreen() {
   const canPrepareTemp =
     !isPicking &&
     !isPreparingTemp &&
+    !isPreparingMetadata &&
     Boolean(
       importSession?.candidates.some(
         candidate => candidate.status === 'selected',
+      ),
+    );
+  const canPrepareMetadata =
+    !isPicking &&
+    !isPreparingTemp &&
+    !isPreparingMetadata &&
+    Boolean(
+      importSession?.candidates.some(candidate =>
+        ['selected', 'copied'].includes(candidate.status),
       ),
     );
   const visibleSessionStatus: ImportSessionStatus | null = isPreparingTemp
@@ -120,6 +134,31 @@ export function LibraryScreen() {
     }
   };
 
+  const handlePrepareDraftMetadata = async () => {
+    if (!importSession) {
+      return;
+    }
+
+    setImportError(null);
+    setIsPreparingMetadata(true);
+
+    try {
+      const updatedSession = await importMetadataService.prepareDraftMetadata(
+        importSession,
+      );
+      updateCurrentImportSession(updatedSession);
+      setImportSession(updatedSession);
+    } catch (error) {
+      setImportError(
+        error instanceof Error
+          ? error.message
+          : 'Die Metadaten konnten nicht vorbereitet werden.',
+      );
+    } finally {
+      setIsPreparingMetadata(false);
+    }
+  };
+
   const handleClearSelection = async () => {
     const sessionToClear = importSession;
 
@@ -166,6 +205,13 @@ export function LibraryScreen() {
             loading={isPreparingTemp}
             onPress={handlePrepareTempSession}
             title="Temporär vorbereiten"
+            variant="secondary"
+          />
+          <AppButton
+            disabled={!canPrepareMetadata}
+            loading={isPreparingMetadata}
+            onPress={handlePrepareDraftMetadata}
+            title="Metadaten vorbereiten"
             variant="secondary"
           />
           {importSession ? (
@@ -314,6 +360,36 @@ function ImportCandidateItem({ candidate }: ImportCandidateItemProps) {
           {candidate.errorMessage}
         </AppText>
       ) : null}
+      {candidate.draftMetadata ? (
+        <ImportDraftMetadataDetails metadata={candidate.draftMetadata} />
+      ) : null}
+    </View>
+  );
+}
+
+type ImportDraftMetadataDetailsProps = {
+  metadata: ImportDraftMetadata;
+};
+
+function ImportDraftMetadataDetails({
+  metadata,
+}: ImportDraftMetadataDetailsProps) {
+  return (
+    <View style={styles.metadataBox}>
+      <AppText variant="caption">Draft Metadata</AppText>
+      <AppText variant="muted">Titel: {metadata.title}</AppText>
+      <AppText variant="muted">
+        Creator: {metadata.creator ?? 'unbekannt'}
+      </AppText>
+      <AppText variant="muted">
+        Medientyp: {getMediaTypeLabel(metadata.mediaType)}
+      </AppText>
+      <AppText variant="muted">
+        Originaldatei: {metadata.originalFilename ?? 'unbekannt'}
+      </AppText>
+      <AppText variant="muted">
+        Dauer: {formatDraftDuration(metadata.durationMs)}
+      </AppText>
     </View>
   );
 }
@@ -341,6 +417,30 @@ function formatBytes(size: number): string {
   }
 
   return `${(kilobytes / 1024).toFixed(1)} MB`;
+}
+
+function formatDraftDuration(durationMs: number | null): string {
+  if (durationMs === null) {
+    return 'unbekannt';
+  }
+
+  const totalSeconds = Math.floor(durationMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function getMediaTypeLabel(
+  mediaType: ImportDraftMetadata['mediaType'],
+): string {
+  const labels: Record<ImportDraftMetadata['mediaType'], string> = {
+    music: 'Musik',
+    podcast: 'Podcast',
+    audiobook: 'Hörbuch',
+  };
+
+  return labels[mediaType];
 }
 
 function getStatusLabel(status: ImportCandidateStatus): string {
@@ -445,6 +545,15 @@ const styles = StyleSheet.create({
   importResult: {
     gap: spacing.md,
     marginTop: spacing.md,
+  },
+  metadataBox: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    padding: spacing.md,
   },
   sessionStatus: {
     backgroundColor: colors.background,

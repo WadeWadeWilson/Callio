@@ -84,6 +84,7 @@ export function mapPickerResultToImportCandidate(
     tempFileName: null,
     copyErrorMessage: null,
     copiedAt: null,
+    draftMetadata: null,
   };
 }
 

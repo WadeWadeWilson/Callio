@@ -331,7 +331,49 @@ Candidate-Statusmodell:
 
 `clearTempSession()` verwirft aktuell die In-Memory-Session und markiert sie als `cleared`. Da noch kein File-System-Modul fuer gezieltes Loeschen eingebunden ist, werden vorhandene Cache-Kopien nicht direkt geloescht; sie liegen im app-privaten Cache und koennen spaeter durch eine explizite Cleanup-Strategie entfernt werden.
 
-Dieses Ticket schreibt noch nicht in `audio_items`, nutzt noch nicht `media/audio`, extrahiert keine Metadaten und implementiert kein Playback.
+Dieser Schritt schreibt noch nicht in `audio_items`, nutzt noch nicht `media/audio`, liest keine technischen Audio-Metadaten aus den Dateien und implementiert kein Playback.
+
+## Minimaler Metadaten-Parser
+
+Callio bereitet fuer Import-Kandidaten einfache Draft-Metadaten vor, damit der spaetere Pre-Import Edit Screen brauchbare Vorschlaege bekommt. Der Parser arbeitet rein lokal und nutzt aktuell nur vorhandene Candidate-Daten wie Dateiname, Extension und MIME-Type.
+
+Dateien:
+
+- Cleaner: `src/features/import/metadata/fileNameCleaner.ts`
+- Parser: `src/features/import/metadata/importMetadataParser.ts`
+- Service: `src/features/import/ImportMetadataService.ts`
+- Smoke Test: `src/features/import/metadata/importMetadataParserSmokeTest.ts`
+
+Cleaning-Regeln:
+
+- Dateiendung entfernen
+- `_` durch Leerzeichen ersetzen
+- mehrfache Leerzeichen auf ein Leerzeichen reduzieren
+- fuehrende Tracknummern wie `01 -`, `001 ` oder `1. ` entfernen
+- einfache End-Zusatztexte wie `(Official Audio)`, `(Official Video)`, `[Official Audio]` und `[Lyrics]` entfernen
+- leerer Titel faellt auf `Unbenannter Titel` zurueck
+
+Creator/Titel-Erkennung:
+
+- Muster `Creator - Title` wird in `creator` und `title` aufgeteilt
+- wenn kein brauchbares Muster vorhanden ist, bleibt `creator` `null`
+- der Medientyp bleibt im MVP standardmaessig `music`
+
+Draft-Metadaten enthalten:
+
+- `title`
+- `creator`
+- `mediaType`
+- `extension`
+- `mimeType`
+- `durationMs`
+- `coverPath`
+- `tags`
+- `originalFilename`
+
+`durationMs` ist aktuell immer `null`, weil noch keine leichte und zuverlaessige native Dauer-Ermittlung eingebunden ist. Es gibt keine Online-Lookups, kein MusicBrainz/AcoustID, keine KI, kein FFmpeg und keinen finalen Import.
+
+Der Development-Smoke-Test prueft typische Dateinamen wie `01 - Daft Punk - One More Time.mp3`, `chapter_001_the_beginning.mp3`, `My_Audio_File__Test.wav`, `Track Name (Official Audio).mp3` und kaputte/leere Namen. Fehler werden geloggt und sollen die App nicht crashen.
 
 ## AppInfoPanel
 
@@ -354,4 +396,4 @@ src/
   utils/
 ```
 
-Aktuell enthaelt Callio das stabile Projektfundament, typisierte Basis-Navigation, einfache Platzhalter-Screens, lokale Datenbank-Grundlagen, eine vorbereitende Android-Dateiauswahl und temporaere Import-Kopien im app-privaten Cache. Finaler Import nach `media/audio`, Datenbank-Schreiboperationen fuer Import, Backup-, Playlist-UI-, Queue- und Playback-Funktionen sind noch nicht implementiert.
+Aktuell enthaelt Callio das stabile Projektfundament, typisierte Basis-Navigation, einfache Platzhalter-Screens, lokale Datenbank-Grundlagen, eine vorbereitende Android-Dateiauswahl, temporaere Import-Kopien im app-privaten Cache und lokale Draft-Metadaten aus Dateinamen. Finaler Import nach `media/audio`, Datenbank-Schreiboperationen fuer Import, Backup-, Playlist-UI-, Queue- und Playback-Funktionen sind noch nicht implementiert.
