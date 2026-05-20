@@ -10,11 +10,14 @@ import { SectionHeader } from '../components/SectionHeader';
 import {
   clearCurrentImportSession,
   createImportPickerService,
+  createImportTempStorageService,
   getCurrentImportSession,
   setCurrentImportSession,
+  updateCurrentImportSession,
   type ImportCandidate,
   type ImportCandidateStatus,
   type ImportSession,
+  type ImportSessionStatus,
 } from '../features/import';
 import { colors, radius, spacing } from '../theme';
 
@@ -27,29 +30,47 @@ const libraryPlaceholders = [
 ];
 
 const importPickerService = createImportPickerService();
+const importTempStorageService = createImportTempStorageService();
 
 export function LibraryScreen() {
   const [importSession, setImportSession] = useState<ImportSession | null>(() =>
     getCurrentImportSession(),
   );
   const [isPicking, setIsPicking] = useState(false);
-  const [pickerError, setPickerError] = useState<string | null>(null);
+  const [isPreparingTemp, setIsPreparingTemp] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const importCounts = useMemo(() => {
     const candidates = importSession?.candidates ?? [];
 
     return {
-      acceptedCount: candidates.filter(
+      selectedCount: candidates.filter(
         candidate => candidate.status === 'selected',
       ).length,
-      rejectedCount: candidates.filter(
-        candidate => candidate.status !== 'selected',
+      copiedCount: candidates.filter(candidate => candidate.status === 'copied')
+        .length,
+      failedCount: candidates.filter(
+        candidate => candidate.status === 'copy_error',
+      ).length,
+      skippedCount: candidates.filter(candidate =>
+        ['unsupported', 'error'].includes(candidate.status),
       ).length,
     };
   }, [importSession]);
+  const canPrepareTemp =
+    !isPicking &&
+    !isPreparingTemp &&
+    Boolean(
+      importSession?.candidates.some(
+        candidate => candidate.status === 'selected',
+      ),
+    );
+  const visibleSessionStatus: ImportSessionStatus | null = isPreparingTemp
+    ? 'copying'
+    : importSession?.status ?? null;
 
   const handlePickAudioFiles = async () => {
-    setPickerError(null);
+    setImportError(null);
     setIsPicking(true);
 
     try {
@@ -60,7 +81,7 @@ export function LibraryScreen() {
         setImportSession(result.session);
       }
     } catch (error) {
-      setPickerError(
+      setImportError(
         error instanceof Error
           ? error.message
           : 'Die Dateiauswahl konnte nicht geöffnet werden.',
@@ -70,10 +91,54 @@ export function LibraryScreen() {
     }
   };
 
-  const handleClearSelection = () => {
-    clearCurrentImportSession();
-    setImportSession(null);
-    setPickerError(null);
+  const handlePrepareTempSession = async () => {
+    if (!importSession) {
+      return;
+    }
+
+    setImportError(null);
+    setIsPreparingTemp(true);
+
+    try {
+      const result = await importTempStorageService.copySessionToTemp(
+        importSession,
+      );
+      updateCurrentImportSession(result.session);
+      setImportSession(result.session);
+
+      if (result.failedCount > 0 && result.copiedCount === 0) {
+        setImportError('Keine Datei konnte temporär vorbereitet werden.');
+      }
+    } catch (error) {
+      setImportError(
+        error instanceof Error
+          ? error.message
+          : 'Die Dateien konnten nicht temporär vorbereitet werden.',
+      );
+    } finally {
+      setIsPreparingTemp(false);
+    }
+  };
+
+  const handleClearSelection = async () => {
+    const sessionToClear = importSession;
+
+    setImportError(null);
+
+    try {
+      if (sessionToClear) {
+        await importTempStorageService.clearTempSession(sessionToClear);
+      }
+    } catch (error) {
+      setImportError(
+        error instanceof Error
+          ? error.message
+          : 'Die temporäre Auswahl konnte nicht vollständig verworfen werden.',
+      );
+    } finally {
+      clearCurrentImportSession();
+      setImportSession(null);
+    }
   };
 
   return (
@@ -96,6 +161,13 @@ export function LibraryScreen() {
             onPress={handlePickAudioFiles}
             title="Audio auswählen"
           />
+          <AppButton
+            disabled={!canPrepareTemp}
+            loading={isPreparingTemp}
+            onPress={handlePrepareTempSession}
+            title="Temporär vorbereiten"
+            variant="secondary"
+          />
           {importSession ? (
             <AppButton
               onPress={handleClearSelection}
@@ -105,22 +177,48 @@ export function LibraryScreen() {
           ) : null}
         </View>
 
-        {pickerError ? (
+        {importError ? (
           <AppText color={colors.danger} style={styles.importMessage}>
-            {pickerError}
+            {importError}
           </AppText>
         ) : null}
 
         {importSession ? (
           <View style={styles.importResult}>
+            <View style={styles.sessionStatus}>
+              <AppText variant="caption">Session</AppText>
+              <AppText
+                color={
+                  visibleSessionStatus
+                    ? getSessionStatusColor(visibleSessionStatus)
+                    : colors.textMuted
+                }
+                variant="section"
+              >
+                {visibleSessionStatus
+                  ? getSessionStatusLabel(visibleSessionStatus)
+                  : 'ohne Status'}
+              </AppText>
+            </View>
+
             <View style={styles.summaryRow}>
               <ImportSummaryItem
-                label="Akzeptiert"
-                value={importCounts.acceptedCount}
+                label="Ausgewählt"
+                value={importCounts.selectedCount}
               />
               <ImportSummaryItem
-                label="Abgelehnt"
-                value={importCounts.rejectedCount}
+                label="Kopiert"
+                value={importCounts.copiedCount}
+              />
+            </View>
+            <View style={styles.summaryRow}>
+              <ImportSummaryItem
+                label="Fehler"
+                value={importCounts.failedCount}
+              />
+              <ImportSummaryItem
+                label="Übersprungen"
+                value={importCounts.skippedCount}
               />
             </View>
 
@@ -191,6 +289,26 @@ function ImportCandidateItem({ candidate }: ImportCandidateItemProps) {
       <AppText color={colors.textSecondary} variant="muted">
         {formatCandidateMeta(candidate)}
       </AppText>
+      {candidate.tempFileName ? (
+        <AppText color={colors.textSecondary} variant="muted">
+          Temp-Datei: {candidate.tempFileName}
+        </AppText>
+      ) : null}
+      {candidate.tempLocalUri ? (
+        <AppText
+          color={colors.textMuted}
+          numberOfLines={2}
+          style={styles.tempUri}
+          variant="muted"
+        >
+          {candidate.tempLocalUri}
+        </AppText>
+      ) : null}
+      {candidate.copyErrorMessage ? (
+        <AppText color={colors.danger} style={styles.errorText} variant="muted">
+          {candidate.copyErrorMessage}
+        </AppText>
+      ) : null}
       {candidate.errorMessage ? (
         <AppText color={colors.danger} style={styles.errorText} variant="muted">
           {candidate.errorMessage}
@@ -206,7 +324,7 @@ function formatCandidateMeta(candidate: ImportCandidate): string {
     : 'ohne Endung';
   const mimeType = candidate.mimeType ?? 'ohne MIME-Type';
   const size =
-    candidate.size === null ? 'Groesse unbekannt' : formatBytes(candidate.size);
+    candidate.size === null ? 'Größe unbekannt' : formatBytes(candidate.size);
 
   return `${extension} · ${mimeType} · ${size}`;
 }
@@ -228,6 +346,9 @@ function formatBytes(size: number): string {
 function getStatusLabel(status: ImportCandidateStatus): string {
   const labels: Record<ImportCandidateStatus, string> = {
     selected: 'bereit',
+    copying: 'kopiert',
+    copied: 'temp bereit',
+    copy_error: 'Kopierfehler',
     unsupported: 'nicht unterstützt',
     error: 'Fehler',
   };
@@ -238,8 +359,35 @@ function getStatusLabel(status: ImportCandidateStatus): string {
 function getStatusColor(status: ImportCandidateStatus): string {
   const colorsByStatus: Record<ImportCandidateStatus, string> = {
     selected: colors.accent,
+    copying: colors.textSecondary,
+    copied: colors.accent,
+    copy_error: colors.danger,
     unsupported: colors.textMuted,
     error: colors.danger,
+  };
+
+  return colorsByStatus[status];
+}
+
+function getSessionStatusLabel(status: ImportSessionStatus): string {
+  const labels: Record<ImportSessionStatus, string> = {
+    selected: 'ausgewählt',
+    copying: 'kopiert',
+    ready: 'temp bereit',
+    error: 'Fehler',
+    cleared: 'verworfen',
+  };
+
+  return labels[status];
+}
+
+function getSessionStatusColor(status: ImportSessionStatus): string {
+  const colorsByStatus: Record<ImportSessionStatus, string> = {
+    selected: colors.textSecondary,
+    copying: colors.textSecondary,
+    ready: colors.accent,
+    error: colors.danger,
+    cleared: colors.textMuted,
   };
 
   return colorsByStatus[status];
@@ -298,6 +446,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.md,
   },
+  sessionStatus: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    gap: spacing.xs,
+    padding: spacing.md,
+  },
   statusText: {
     textAlign: 'right',
   },
@@ -313,5 +469,8 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+  },
+  tempUri: {
+    marginTop: spacing.xs,
   },
 });

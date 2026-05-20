@@ -1,5 +1,17 @@
 export type ImportInferredMediaType = 'music' | 'podcast' | 'audiobook';
-export type ImportCandidateStatus = 'selected' | 'unsupported' | 'error';
+export type ImportCandidateStatus =
+  | 'selected'
+  | 'unsupported'
+  | 'copying'
+  | 'copied'
+  | 'copy_error'
+  | 'error';
+export type ImportSessionStatus =
+  | 'selected'
+  | 'copying'
+  | 'ready'
+  | 'error'
+  | 'cleared';
 
 export interface ImportCandidate {
   id: string;
@@ -12,6 +24,10 @@ export interface ImportCandidate {
   status: ImportCandidateStatus;
   errorMessage: string | null;
   selectedAt: string;
+  tempLocalUri: string | null;
+  tempFileName: string | null;
+  copyErrorMessage: string | null;
+  copiedAt: string | null;
 }
 
 export interface ImportSession {
@@ -19,12 +35,22 @@ export interface ImportSession {
   candidates: ImportCandidate[];
   createdAt: string;
   updatedAt: string;
+  tempDirectory: string | null;
+  status: ImportSessionStatus;
+  errorMessage: string | null;
 }
 
 export interface PickAudioFilesResult {
   session: ImportSession;
   acceptedCount: number;
   rejectedCount: number;
+}
+
+export interface CopyImportSessionResult {
+  session: ImportSession;
+  copiedCount: number;
+  failedCount: number;
+  skippedCount: number;
 }
 
 export const SUPPORTED_AUDIO_EXTENSIONS = [

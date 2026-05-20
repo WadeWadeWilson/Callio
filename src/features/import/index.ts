@@ -4,15 +4,23 @@ export {
   type ImportPickerService,
 } from './ImportPickerService';
 export {
+  DocumentsImportTempStorageService,
+  createImportTempStorageService,
+  type ImportTempStorageService,
+} from './ImportTempStorageService';
+export {
   clearCurrentImportSession,
   getCurrentImportSession,
   setCurrentImportSession,
+  updateCurrentImportSession,
 } from './ImportSessionStore';
 export type {
+  CopyImportSessionResult,
   ImportCandidate,
   ImportCandidateStatus,
   ImportInferredMediaType,
   ImportSession,
+  ImportSessionStatus,
   PickAudioFilesResult,
   SupportedAudioExtension,
   SupportedAudioMimeType,

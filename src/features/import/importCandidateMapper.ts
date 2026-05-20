@@ -34,6 +34,9 @@ export function mapPickerResultsToPickAudioFilesResult(
     candidates,
     createdAt: timestamp,
     updatedAt: timestamp,
+    tempDirectory: null,
+    status: 'selected',
+    errorMessage: null,
   };
 
   return {
@@ -77,6 +80,10 @@ export function mapPickerResultToImportCandidate(
     status: validation.status,
     errorMessage: validation.errorMessage,
     selectedAt,
+    tempLocalUri: null,
+    tempFileName: null,
+    copyErrorMessage: null,
+    copiedAt: null,
   };
 }
 

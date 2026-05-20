@@ -17,6 +17,16 @@ function pick() {
   return Promise.reject(error);
 }
 
+function keepLocalCopy(options) {
+  return Promise.resolve(
+    options.files.map(file => ({
+      status: 'success',
+      sourceUri: file.uri,
+      localUri: `file:///mock-cache/${file.fileName}`,
+    })),
+  );
+}
+
 function isErrorWithCode(error) {
   return Boolean(error && typeof error === 'object' && 'code' in error);
 }
@@ -24,6 +34,7 @@ function isErrorWithCode(error) {
 module.exports = {
   errorCodes,
   isErrorWithCode,
+  keepLocalCopy,
   pick,
   types,
 };

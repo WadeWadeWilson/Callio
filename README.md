@@ -268,10 +268,12 @@ Import-Grundlage:
 - Typen: `src/features/import/types.ts`
 - Picker-Mapper: `src/features/import/importCandidateMapper.ts`
 - Picker-Service: `src/features/import/ImportPickerService.ts`
+- Temp-Pfade: `src/features/import/importStoragePaths.ts`
+- Temp-Storage-Service: `src/features/import/ImportTempStorageService.ts`
 - temporaerer In-Memory-Store: `src/features/import/ImportSessionStore.ts`
 - Feature-Exports: `src/features/import/index.ts`
 
-Der Library-Screen enthaelt eine minimale Testoberflaeche fuer `Audio auswaehlen`. Der Picker erlaubt Mehrfachauswahl, soweit der Android Document Provider das unterstuetzt. Ergebnisse werden als `ImportCandidate` in einer temporaeren `ImportSession` angezeigt und koennen mit `Auswahl verwerfen` wieder geleert werden.
+Der Library-Screen enthaelt eine minimale Testoberflaeche fuer `Audio auswaehlen`. Der Picker erlaubt Mehrfachauswahl, soweit der Android Document Provider das unterstuetzt. Ergebnisse werden als `ImportCandidate` in einer temporaeren `ImportSession` angezeigt.
 
 Unterstuetzte Audio-Dateiendungen im MVP:
 
@@ -294,7 +296,42 @@ Unterstuetzte MIME-Typen:
 - `audio/ogg`
 - `audio/opus`
 
-Der Picker nutzt den Android System Document Picker. Dafuer wurden keine zusaetzlichen Storage-Permissions wie `READ_EXTERNAL_STORAGE` hinzugefuegt. Dieses Ticket kopiert noch keine Dateien in private App Storage, schreibt noch nicht in `audio_items`, extrahiert keine Metadaten und implementiert kein Playback.
+Der Picker nutzt den Android System Document Picker. Dafuer wurden keine zusaetzlichen Storage-Permissions wie `READ_EXTERNAL_STORAGE` hinzugefuegt. Die Dateiauswahl selbst schreibt noch nicht in `audio_items`, extrahiert keine Metadaten und implementiert kein Playback.
+
+## Temporaere Import-Session
+
+Android Document Provider liefern haeufig `content://` URIs. Callio behandelt diese URIs nicht als dauerhafte Dateipfade. Unterstuetzte Kandidaten koennen deshalb ueber `@react-native-documents/picker` mit `keepLocalCopy` in den app-privaten Cache vorbereitet werden.
+
+Temp-Kopieren:
+
+- Service: `src/features/import/ImportTempStorageService.ts`
+- Picker-API: `keepLocalCopy`
+- Ziel: `destination: 'cachesDirectory'`
+- Konzeptpfad: `temp/import-session-<sessionId>/`
+- gespeicherte Candidate-Felder: `tempLocalUri`, `tempFileName`, `copiedAt`, `copyErrorMessage`
+
+Die Picker-Library erstellt den tatsaechlichen lokalen Cache-Pfad selbst und gibt ihn als `file://` URI zurueck. Callio speichert diese URI nur in der temporaeren Import-Session. Es wird noch nicht nach `media/audio` kopiert und es wird noch kein `audio_items`-Datensatz geschrieben.
+
+Session-Statusmodell:
+
+- `selected`
+- `copying`
+- `ready`
+- `error`
+- `cleared`
+
+Candidate-Statusmodell:
+
+- `selected`
+- `unsupported`
+- `copying`
+- `copied`
+- `copy_error`
+- `error`
+
+`clearTempSession()` verwirft aktuell die In-Memory-Session und markiert sie als `cleared`. Da noch kein File-System-Modul fuer gezieltes Loeschen eingebunden ist, werden vorhandene Cache-Kopien nicht direkt geloescht; sie liegen im app-privaten Cache und koennen spaeter durch eine explizite Cleanup-Strategie entfernt werden.
+
+Dieses Ticket schreibt noch nicht in `audio_items`, nutzt noch nicht `media/audio`, extrahiert keine Metadaten und implementiert kein Playback.
 
 ## AppInfoPanel
 
@@ -317,4 +354,4 @@ src/
   utils/
 ```
 
-Aktuell enthaelt Callio das stabile Projektfundament, typisierte Basis-Navigation, einfache Platzhalter-Screens, lokale Datenbank-Grundlagen und eine vorbereitende Android-Dateiauswahl. Finaler Import, Datei-Kopieren, Backup-, Playlist-UI-, Queue- und Playback-Funktionen sind noch nicht implementiert.
+Aktuell enthaelt Callio das stabile Projektfundament, typisierte Basis-Navigation, einfache Platzhalter-Screens, lokale Datenbank-Grundlagen, eine vorbereitende Android-Dateiauswahl und temporaere Import-Kopien im app-privaten Cache. Finaler Import nach `media/audio`, Datenbank-Schreiboperationen fuer Import, Backup-, Playlist-UI-, Queue- und Playback-Funktionen sind noch nicht implementiert.
