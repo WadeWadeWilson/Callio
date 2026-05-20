@@ -259,6 +259,43 @@ Im Development fuehrt der App-Start `runPlaylistRepositorySmokeTest()` aus. Der 
 
 Dieses Ticket enthaelt noch keine Playlist-UI, keinen Import, keinen File-System-Zugriff, kein Playback, keine Backup-Funktion und keine Queue-Logik.
 
+## Datei-Auswahl
+
+Callio nutzt `@react-native-documents/picker` fuer die Android-Dateiauswahl. Die konkrete Picker-Library ist in `src/features/import/ImportPickerService.ts` gekapselt, damit Screens und spaetere Import-Features nicht direkt von der nativen Picker-API abhaengen.
+
+Import-Grundlage:
+
+- Typen: `src/features/import/types.ts`
+- Picker-Mapper: `src/features/import/importCandidateMapper.ts`
+- Picker-Service: `src/features/import/ImportPickerService.ts`
+- temporaerer In-Memory-Store: `src/features/import/ImportSessionStore.ts`
+- Feature-Exports: `src/features/import/index.ts`
+
+Der Library-Screen enthaelt eine minimale Testoberflaeche fuer `Audio auswaehlen`. Der Picker erlaubt Mehrfachauswahl, soweit der Android Document Provider das unterstuetzt. Ergebnisse werden als `ImportCandidate` in einer temporaeren `ImportSession` angezeigt und koennen mit `Auswahl verwerfen` wieder geleert werden.
+
+Unterstuetzte Audio-Dateiendungen im MVP:
+
+- `mp3`
+- `m4a`
+- `aac`
+- `wav`
+- `flac`
+- `ogg`
+- `opus`
+
+Unterstuetzte MIME-Typen:
+
+- `audio/mpeg`
+- `audio/mp4`
+- `audio/aac`
+- `audio/wav`
+- `audio/x-wav`
+- `audio/flac`
+- `audio/ogg`
+- `audio/opus`
+
+Der Picker nutzt den Android System Document Picker. Dafuer wurden keine zusaetzlichen Storage-Permissions wie `READ_EXTERNAL_STORAGE` hinzugefuegt. Dieses Ticket kopiert noch keine Dateien in private App Storage, schreibt noch nicht in `audio_items`, extrahiert keine Metadaten und implementiert kein Playback.
+
 ## AppInfoPanel
 
 `src/components/AppInfoPanel.tsx` zeigt App-Name, Version, Build Number, Environment, Platform Target und Storage Strategy. Das Panel ist dezent im Home-Screen eingebunden und nutzt die bestehenden UI-Komponenten.
@@ -280,4 +317,4 @@ src/
   utils/
 ```
 
-Aktuell enthaelt Callio das stabile Projektfundament, typisierte Basis-Navigation, einfache Platzhalter-Screens und die ersten lokalen Datenbank-Grundlagen. Import-, Backup-, Playlist-, Queue- und Playback-Funktionen sind noch nicht implementiert.
+Aktuell enthaelt Callio das stabile Projektfundament, typisierte Basis-Navigation, einfache Platzhalter-Screens, lokale Datenbank-Grundlagen und eine vorbereitende Android-Dateiauswahl. Finaler Import, Datei-Kopieren, Backup-, Playlist-UI-, Queue- und Playback-Funktionen sind noch nicht implementiert.
